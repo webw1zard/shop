@@ -1,21 +1,26 @@
+@import "swiper/css";
+@import "swiper/css/navigation";
+@import "swiper/css/pagination";
+@import "rodal/lib/rodal.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+.drop-zone {
+    transition: background-color 0.2s ease;
   }
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
+  
+  .drop-zone:hover {
+    background-color: #f8f9fa;
+  }
+  
+  .card {
+    cursor: grab;
+    transition: transform 0.2s ease;
+  }
+  
+  .card:active {
+    cursor: grabbing;
+    transform: scale(1.02);
+  }
+  
