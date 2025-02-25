@@ -1,5 +1,4 @@
 "use client";
-
 import Link from "next/link";
 import Image from "next/image";
 import c1 from "@/public/carousel1.jpg";
@@ -13,6 +12,7 @@ import "swiper/css/pagination";
 
 export default function Home() {
   const [orderCount, setOrderCount] = useState(0);
+  const [user, setUser] = useState(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -40,6 +40,40 @@ export default function Home() {
     };
   }, []);
 
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error("Failed to get session:", sessionError);
+        return;
+      }
+
+      const session = sessionData?.session;
+      if (session?.user) {
+        const { data: userData, error: userError } = await supabase
+          .from("users")
+          .select("role")
+          .eq("id", session.user.id)
+          .single();
+
+        if (userError) {
+          console.error("Failed to get user role:", userError);
+        } else {
+          // @ts-expect-error
+          setUser({ id: session.user.id, role: userData.role });
+        }
+      }
+    };
+
+    checkUser();
+  }, []);
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) console.error("Error logging out:", error);
+    else setUser(null);
+  };
+
   return (
     <>
       <nav className="flex justify-between items-center p-4 bg-white shadow-md sticky top-0 z-50">
@@ -66,18 +100,42 @@ export default function Home() {
               Shop
             </Link>
           </li>
-          <li>
-            <Link
-              href="/login"
-              className="px-4 py-2 rounded-md text-white bg-green-600 hover:bg-green-700 transition duration-300 text-decoration-none"
-            >
-              Login
-            </Link>
-          </li>
+          
+          {user?.role === "admin" && (
+            <li>
+              <Link
+                href="/admin"
+                className="px-4 py-2 rounded-md text-white bg-blue-600 hover:bg-blue-700 transition duration-300 text-decoration-none"
+              >
+                Admin
+              </Link>
+            </li>
+          )}
+
+          {user ? (
+            <li>
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 rounded-md text-white bg-red-600 hover:bg-red-700 transition duration-300 text-decoration-none"
+              >
+                Logout
+              </button>
+            </li>
+          ) : (
+            <li>
+              <Link
+                href="/login"
+                className="px-4 py-2 rounded-md text-white bg-green-600 hover:bg-green-700 transition duration-300 text-decoration-none"
+              >
+                Login
+              </Link>
+            </li>
+          )}
+
           <li className="relative">
             <Link
               href="/cart"
-              className=" rounded-md text-white transition duration-300 flex items-center"
+              className="rounded-md text-white transition duration-300 flex items-center"
             >
               🛒
               <span className="absolute -top-2 -right-3 bg-red-600 text-white text-xs rounded-full px-2">
@@ -112,45 +170,6 @@ export default function Home() {
                 </h1>
                 <p className="text-xl mb-6 animate-fadeInUp delay-200">
                   Discover our range of trendy and affordable plants.
-                </p>
-                <button className="bg-green-600 text-white px-8 py-3 rounded-full hover:bg-green-700 transition duration-300 animate-fadeInUp delay-400">
-                  SHOP NOW
-                </button>
-              </div>
-            </div>
-          </SwiperSlide>
-
-          <SwiperSlide>
-            <div className="relative w-full h-full">
-              <Image
-                src="https://images.unsplash.com/photo-1501004318641-b39e6451bec6?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80"
-                alt="Plant 2"
-                fill
-                className="object-cover"
-              />
-              <div className="absolute inset-0 bg-black bg-opacity-30 flex flex-col justify-center items-center text-center text-white p-4">
-                <h1 className="text-6xl font-extrabold mb-4 animate-fadeInUp">
-                  BRING <span className="text-green-400">NATURE</span> INDOORS
-                </h1>
-                <p className="text-xl mb-6 animate-fadeInUp delay-200">
-                  Create your own urban jungle with our fresh plants.
-                </p>
-                <button className="bg-green-600 text-white px-8 py-3 rounded-full hover:bg-green-700 transition duration-300 animate-fadeInUp delay-400">
-                  SHOP NOW
-                </button>
-              </div>
-            </div>
-          </SwiperSlide>
-
-          <SwiperSlide>
-            <div className="relative w-full h-full">
-              <Image src={c1} alt="Plant 3" fill className="object-cover" />
-              <div className="absolute inset-0 bg-black bg-opacity-30 flex flex-col justify-center items-center text-center text-white p-4">
-                <h1 className="text-6xl font-extrabold mb-4 animate-fadeInUp">
-                  <span className="text-green-400">GREENSHOP</span> COLLECTION
-                </h1>
-                <p className="text-xl mb-6 animate-fadeInUp delay-200">
-                  Find the perfect plants for your home and office.
                 </p>
                 <button className="bg-green-600 text-white px-8 py-3 rounded-full hover:bg-green-700 transition duration-300 animate-fadeInUp delay-400">
                   SHOP NOW

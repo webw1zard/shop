@@ -1,65 +1,152 @@
-"use client"
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { createClient } from '@/supabase/client';
+"use client";
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { createClient } from "@/supabase/client";
 
-const Shop = () => {
-  const [categories, setCategories] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState('All Plants');
+export default function Shop1() {
+  const [categories, setCategories] = useState<any>([]);
+  const [products, setProducts] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [priceRange, setPriceRange] = useState([39, 1230]);
+  const [size, setSize] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const supabase = createClient()
 
+  const fetchCategories = async () => {
+    const { data, error } = await supabase.from("category").select("*");
+    if (error) console.error(error);
+    else setCategories(data);
+  };
+
+  const fetchProducts = async () => {
+    let query = supabase.from("product").select("*");
+    
+
+    if (selectedCategory) {
+      query = query.eq("category_id", selectedCategory);
+    }
+    if (size) {
+      query = query.eq("size", size);
+    }
+    query = query
+      .gte("price", priceRange[0])
+      .lte("price", priceRange[1])
+      .range((page - 1) * 9, page * 9 - 1);
+
+    const { data, error, count } = await query;
+    console.log(data);
+    
+    if (error) console.error(error);
+    else {
+      setProducts(data as any);
+      setTotalPages(Math.ceil(count! / 9));
+    }
+  };
+
   useEffect(() => {
-    const fetchCategories = async () => {
-      const { data, error } = await supabase.from('category').select('*');
-      if (error) console.error(error);
-      else setCategories(data);
-    };
-
-    const fetchProducts = async () => {
-      const { data, error } = await supabase.from('products').select('*');
-      if (error) console.error(error);
-      else setProducts(data);
-    };
-
     fetchCategories();
     fetchProducts();
-  }, []);
-
-  const filteredProducts = selectedCategory === 'All Plants' 
-    ? products 
-    : products.filter(product => product.category_id === selectedCategory);
+  }, [selectedCategory, priceRange, size, page]);
 
   return (
     <div className="flex">
       <aside className="w-1/4 p-4">
-        <h2 className="text-2xl font-bold mb-4">Categories</h2>
+        <h2 className="text-xl font-bold mb-4">Categories</h2>
         <ul className="space-y-2">
-          <li className={selectedCategory === 'All Plants' ? 'font-bold text-green-600' : ''} 
-              onClick={() => setSelectedCategory('All Plants')}>
-            All Plants
-          </li>
-          {categories.map(category => (
-            <li key={category.id} className={selectedCategory === category.id ? 'font-bold text-green-600' : ''}
-                onClick={() => setSelectedCategory(category.id)}>
-              {category.name}
+          {categories.map((cat: any) => (
+            <li key={cat.id}>
+              <button
+                className={`text-left w-full ${
+                  selectedCategory === cat.id ? "text-green-600" : ""
+                }`}
+                onClick={() => setSelectedCategory(cat.id)}
+              >
+                {cat.name}
+              </button>
             </li>
           ))}
+          <li>
+            <button
+              className="text-left w-full"
+              onClick={() => setSelectedCategory(null)}
+            >
+              All Plants
+            </button>
+          </li>
+        </ul>
+
+        <h2 className="text-xl font-bold mt-6 mb-2">Price Range</h2>
+        <input
+          type="range"
+          min="39"
+          max="1230"
+          value={priceRange[0]}
+          onChange={(e) =>
+            setPriceRange([Number(e.target.value), priceRange[1]])
+          }
+          className="w-full"
+        />
+        <input
+          type="range"
+          min="39"
+          max="1230"
+          value={priceRange[1]}
+          onChange={(e) =>
+            setPriceRange([priceRange[0], Number(e.target.value)])
+          }
+          className="w-full"
+        />
+        <p className="mt-2">
+          Price: ${priceRange[0]} - ${priceRange[1]}
+        </p>
+
+        <h2 className="text-xl font-bold mt-6 mb-2">Size</h2>
+        <ul className="space-y-2">
+          <li>
+            <button onClick={() => setSize("Small")}>Small</button>
+          </li>
+          <li>
+            <button onClick={() => setSize("Medium")}>Medium</button>
+          </li>
+          <li>
+            <button onClick={() => setSize("Large")}>Large</button>
+          </li>
+          <li>
+            <button onClick={() => setSize("")}>All Sizes</button>
+          </li>
         </ul>
       </aside>
 
-      <section className="w-3/4 grid grid-cols-3 gap-4 p-4">
-        {filteredProducts.map(product => (
-          <div key={product.id} className="border rounded-lg p-4 shadow-md hover:shadow-lg transition">
-            <img src={product.image_url} alt={product.name} className="w-full h-64 object-cover rounded-lg mb-4" />
-            <h3 className="text-xl font-bold mb-2">{product.name}</h3>
-            <p className="text-green-600 font-semibold mb-2">${product.price}</p>
-            <Link href={`/product/${product.id}`} className="text-blue-500 hover:underline">View Details</Link>
+      <main className="w-3/4 p-4 grid grid-cols-3 gap-6">
+        {products.map((product: any) => (
+          <div
+            key={product.id}
+            className="border rounded-lg p-4 shadow hover:shadow-lg transition"
+          >
+            <Image
+              src={product.image}
+              alt={product.title}
+              width={300}
+              height={300}
+              className="rounded-lg object-cover"
+            />
+            <h3 className="text-lg font-semibold mt-4">{product.title}</h3>
+            <p className="text-green-600 font-bold">${product.price}</p>
+            {product.discount && (
+              <span className="bg-red-600 text-white text-sm rounded-full px-2 py-1">
+                {product.discount}% OFF
+              </span>
+            )}
+            <Link href={`/product/${product.id}`}>
+              <button className="mt-4 bg-green-600 text-white px-4 py-2 rounded-full hover:bg-green-700 transition">
+                View Details
+              </button>
+            </Link>
           </div>
         ))}
-      </section>
+      </main>
     </div>
   );
-};
-
-export default Shop;
+}

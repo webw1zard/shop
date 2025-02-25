@@ -6,7 +6,9 @@ import { createClient } from "@/supabase/client";
 export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [name, setName] = useState<string>(""); 
+  const [role, setRole] = useState<string>("user"); 
   const supabase = createClient();
   const router = useRouter();
 
@@ -19,16 +21,28 @@ export default function Register() {
 
     if (error) {
       alert(error.message);
+      setLoading(false);
+      return;
+    }
+
+    if (email === "ulugbeknizomov999@gmail.com") {
+      setRole("admin");
+    } else {
+      setRole("user");
+    }
+
+    const { error: insertError } = await supabase
+      .from("users")
+      .insert([{ name, email, password, role }]);
+    
+    if (insertError) {
+      alert("Foydalanuvchini qo'shishda xato yuz berdi!");
     } else {
       alert("Ro'yxatdan o'tdingiz! Emailingizni tasdiqlang.");
       router.push("/");
     }
-    setLoading(false);
 
-    const { data } = await supabase
-      .from("users")
-      .insert([{ some_column: "someValue", other_column: "otherValue" }])
-      .select();
+    setLoading(false);
   };
 
   return (
@@ -50,6 +64,13 @@ export default function Register() {
           className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Ism"
+          className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
         />
         <button
           onClick={handleRegister}
