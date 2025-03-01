@@ -1,76 +1,73 @@
 "use client";
 import Link from "next/link";
-import Image from "next/image";
-import c1 from "@/public/carousel1.jpg";
-import { useEffect, useState } from "react";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Pagination } from "swiper/modules";
+import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/supabase/client";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
+const supabase = createClient();
+
+interface User {
+  id: string;
+  role: string;
+}
 
 export default function Home() {
   const [orderCount, setOrderCount] = useState(0);
-  const [user, setUser] = useState(null);
-  const supabase = createClient();
+  const [user, setUser] = useState<User | null>(null);
+  const [len, setLen] = useState(0);
 
+  const fetchOrderCount = useCallback(async () => {
+    const { data, error } = await supabase.from("orders").select("*");
+    if (error) console.error("Error fetching orders:", error);
+    else setOrderCount(data.length);
+  }, []);
   useEffect(() => {
-    const fetchOrderCount = async () => {
-      const { data, error } = await supabase.from("orders").select("*");
-      if (error) console.error(error);
-      else setOrderCount(data.length);
-    };
-
     fetchOrderCount();
+  setLen(localStorage.getItem("cart") ? JSON.parse(localStorage.getItem("cart") as string).length : 0);
 
     const channel = supabase
       .channel("orders")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "orders" },
-        () => {
-          fetchOrderCount();
-        }
+        { event: "INSERT", schema: "public", table: "orders" },
+        () => fetchOrderCount()
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchOrderCount]);
 
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) {
-        console.error("Failed to get session:", sessionError);
-        return;
-      }
+  // const checkUser = useCallback(async () => {
+  //   const { data: sessionData} =
+  //     await supabase.auth.getSession();
+  //   const session = sessionData?.session;
+  //   console.log(session);
+    
+  //   if (session?.user) {
+  //     const { data: userData, error: userError } = await supabase
+  //       .from("users")
+  //       .select("role")
+  //       .eq("id", session.user.id)
+  //       .single();
 
-      const session = sessionData?.session;
-      if (session?.user) {
-        const { data: userData, error: userError } = await supabase
-          .from("users")
-          .select("role")
-          .eq("id", session.user.id)
-          .single();
+  //     if (userError) {
+  //       console.error(userError);
+  //     } else {
+  //       setUser({ id: session.user.id, role: userData.role });
+  //     }
+  //   }
+  // }, []);
 
-        if (userError) {
-          console.error("Failed to get user role:", userError);
-        } else {
-          // @ts-expect-error
-          setUser({ id: session.user.id, role: userData.role });
-        }
-      }
-    };
-
-    checkUser();
-  }, []);
+  // useEffect(() => {
+  //   checkUser();
+  // }, [checkUser]);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) console.error("Error logging out:", error);
+    if (error) console.error(error);
     else setUser(null);
   };
 
@@ -87,7 +84,7 @@ export default function Home() {
           <li>
             <Link
               href="/"
-              className="px-4 py-2 rounded-md text-white bg-green-600 hover:bg-green-700 transition duration-300 text-decoration-none"
+              className="px-4 py-2 rounded-md text-white bg-green-600 hover:bg-green-700 transition duration-300"
             >
               Home
             </Link>
@@ -95,17 +92,16 @@ export default function Home() {
           <li>
             <Link
               href="/shop"
-              className="px-4 py-2 rounded-md text-white bg-green-600 hover:bg-green-700 transition duration-300 text-decoration-none"
+              className="px-4 py-2 rounded-md text-white bg-green-600 hover:bg-green-700 transition duration-300"
             >
               Shop
             </Link>
           </li>
-          
           {user?.role === "admin" && (
             <li>
               <Link
                 href="/admin"
-                className="px-4 py-2 rounded-md text-white bg-blue-600 hover:bg-blue-700 transition duration-300 text-decoration-none"
+                className="px-4 py-2 rounded-md text-white bg-blue-600 hover:bg-blue-700 transition duration-300"
               >
                 Admin
               </Link>
@@ -116,7 +112,7 @@ export default function Home() {
             <li>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 rounded-md text-white bg-red-600 hover:bg-red-700 transition duration-300 text-decoration-none"
+                className="px-4 py-2 rounded-md text-white bg-red-600 hover:bg-red-700 transition duration-300"
               >
                 Logout
               </button>
@@ -125,7 +121,7 @@ export default function Home() {
             <li>
               <Link
                 href="/login"
-                className="px-4 py-2 rounded-md text-white bg-green-600 hover:bg-green-700 transition duration-300 text-decoration-none"
+                className="px-4 py-2 rounded-md text-white bg-green-600 hover:bg-green-700 transition duration-300"
               >
                 Login
               </Link>
@@ -139,14 +135,15 @@ export default function Home() {
             >
               🛒
               <span className="absolute -top-2 -right-3 bg-red-600 text-white text-xs rounded-full px-2">
-                {orderCount}
+                {len}
               </span>
             </Link>
           </li>
+          
         </ul>
       </nav>
 
-      <section className="px-20 py-10 bg-gradient-to-b from-green-50 to-green-100">
+      {/* <section className="px-20 py-10 bg-gradient-to-b from-green-50 to-green-100">
         <Swiper
           modules={[Navigation, Pagination]}
           navigation
@@ -178,7 +175,7 @@ export default function Home() {
             </div>
           </SwiperSlide>
         </Swiper>
-      </section>
+      </section> */}
     </>
   );
 }

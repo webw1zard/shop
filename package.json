@@ -13,6 +13,7 @@
     "@supabase/ssr": "^0.5.2",
     "bootstrap": "^5.3.3",
     "install": "^0.13.0",
+    "lodash": "^4.17.21",
     "next": "15.1.7",
     "npm": "^11.1.0",
     "react": "^19.0.0",
@@ -22,12 +23,14 @@
     "react-loading-skeleton": "^3.5.0",
     "react-slick": "^0.30.3",
     "react-toastify": "^11.0.5",
+    "remixicon": "^4.6.0",
     "rodal": "^2.1.0",
     "slick-carousel": "^1.8.1",
     "swiper": "^11.2.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/lodash": "^4.17.15",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -1,386 +1,386 @@
 "use client";
+import { useEffect, useState } from "react";
 import { createClient } from "@/supabase/client";
-import Image from "next/image";
-import React, { useEffect, useState } from "react";
-import { MdDelete, MdEdit } from "react-icons/md";
-import Skeleton from "react-loading-skeleton";
 import { toast, ToastContainer } from "react-toastify";
+import { FaSpinner } from "react-icons/fa";
+import { CiEdit, CiTrash } from "react-icons/ci";
 import Rodal from "rodal";
-
-interface CategoryType {
+import "rodal/lib/rodal.css";
+type Category = {
   id: string;
-  name: string;
+  title: string;
+};
+export type Product = {
+  id: string;
+  title: string;
+  categoryId: string;
   desc: string;
-  active: boolean;
-}
-
-interface ProductType {
-  id: number;
-  name: string;
-  desc: string;
-  price: number;
-  category_id: string;
-  active: boolean;
+  price: string;
   images: string[];
-}
-
+  active: boolean;
+};
 export default function Products() {
-  const [products, setProducts] = useState<ProductType[]>([]);
-  const [categories, setCategories] = useState<CategoryType[]>([]);
-  const [name, setName] = useState("");
-  const [desc, setDesc] = useState("");
-  const [price, setPrice] = useState(0);
-  const [categoryId, setCategoryId] = useState("");
-  const [active, setActive] = useState(false);
-  const [images, setImages] = useState<string[]>([]);
-  const [openRodal, setOpenRodal] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [current, setCurrent] = useState<number | null>(null);
-
   const supabase = createClient();
-
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [addModalVisible, setAddModalVisible] = useState(false);
+  const [formData, setFormData] = useState<Product | null>(null);
+  const [newProduct, setNewProduct] = useState({
+    title: "",
+    desc: "",
+    price: "0",
+    categoryId: "",
+    active: true,
+    images: [] as string[],
+  });
   useEffect(() => {
     fetchProducts();
-    fetchCategory();
+    fetchCategories();
   }, []);
-
-  const fetchProducts = async () => {
-    const { data, error } = await supabase.from("Shop_Products").select("*");
-    if (error) {
-      toast.error("Mahsulotlarni yuklashda xatolik!");
-      console.error(error);
-    } else {
-      setProducts(data);
-      setLoading(false);
-    }
-  };
-
-  const fetchCategory = async () => {
-    const { data, error } = await supabase.from("Shop_Category").select("*");
-    if (error) {
-      toast.error("Kategoriyalarni yuklashda xatolik!");
-      console.error(error);
-    } else {
-      setCategories(data);
-    }
-  };
-
-  const handleAddProduct = async () => {
-    if (!name || !desc || !price || !categoryId || !images.length) {
-      toast.error("Barcha maydonlarni to'ldiring!");
-      return;
-    }
-
+  async function fetchProducts() {
     setLoading(true);
-
-    if (current === null) {
-      const { error } = await supabase.from("Shop_Products").insert([
-        {
-          name,
-          desc,
-          price,
-          category_id: categoryId,
-          active,
-          images,
-        },
-      ]);
-      if (error) {
-        toast.error("Mahsulot qo'shishda xatolik!");
-        console.error(error);
-      } else {
-        toast.success("Mahsulot muvaffaqiyatli qo'shildi!");
-      }
+    const { data, error } = await supabase.from("product").select("*");
+    if (error) {
+      console.error("❌ Error fetching products:", error);
+      toast.error("Failed to fetch products!");
     } else {
-      const { error } = await supabase
-        .from("Shop_Products")
-        .update({
-          name,
-          desc,
-          price,
-          category_id: categoryId,
-          active,
-          images,
-        })
-        .eq("id", current);
-      if (error) {
-        toast.error("Mahsulotni yangilashda xatolik!");
-        console.error(error);
-      } else {
-        toast.success("Mahsulot muvaffaqiyatli yangilandi!");
-      }
+      setProducts(data || []);
     }
-
-    setOpenRodal(false);
-    fetchProducts();
-    setName("");
-    setDesc("");
-    setPrice(0);
-    setActive(false);
-    setCategoryId("");
-    setImages([]);
-    setCurrent(null);
     setLoading(false);
-  };
-
-  const handleActive = async (id: number) => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("Shop_Products")
-      .select("active")
-      .eq("id", id)
-      .single();
-
+  }
+  async function fetchCategories() {
+    const { data, error } = await supabase.from("category").select("*");
     if (error) {
-      toast.error("Holatni yangilashda xatolik!");
-      console.error(error);
+      console.error("Error fetching categories:", error);
+    } else {
+      setCategories(data || []);
+    }
+  }
+  async function handleDelete(productId: string) {
+    const { error } = await supabase
+      .from("product")
+      .delete()
+      .eq("id", productId);
+    if (error) {
+      console.error("Error deleting product:", error);
+      toast.error("Failed to delete product!");
+    } else {
+      toast.success("Product deleted successfully!");
+      fetchProducts();
+    }
+  }
+  async function handleUpdate() {
+    if (!formData || !formData.id) return;
+    const updateData = {
+      title: formData.title,
+      desc: formData.desc,
+      price: formData.price,
+      active: formData.active,
+      categoryId: formData.categoryId,
+      images: formData.images,
+    };
+    const { error } = await supabase
+      .from("product")
+      .update(updateData)
+      .eq("id", formData.id);
+    if (error) {
+      toast.error(`Failed to update product! ${error.message}`);
+    } else {
+      toast.success("Product updated successfully!");
+      setModalVisible(false);
+      fetchProducts();
+    }
+  }
+  async function handleAdd() {
+    const { error } = await supabase
+      .from("product")
+      .insert([{ ...newProduct }]);
+    if (error) {
+      toast.error(`Failed to add product! ${error.message}`);
       return;
     }
-
-    if (data) {
-      const newStatus = !data.active;
-      const { error: updateError } = await supabase
-        .from("Shop_Products")
-        .update({ active: newStatus })
-        .eq("id", id);
-
-      if (updateError) {
-        toast.error("Holatni yangilashda xatolik yuz berdi!");
-        console.error(updateError);
+    toast.success("Product added successfully!");
+    setAddModalVisible(false);
+    setNewProduct({
+      title: "",
+      desc: "",
+      price: "0",
+      categoryId: "",
+      active: true,
+      images: [],
+    });
+    fetchProducts();
+  }
+  const handleImageUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    isEditModal: boolean
+  ) => {
+    const files = e.target.files;
+    if (!files) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      if (isEditModal && formData) {
+        setFormData({ ...formData, images: [...formData.images, base64] });
       } else {
-        toast.success("Holat muvaffaqiyatli o'zgartirildi!");
-        fetchProducts();
-        setLoading(false);
+        setNewProduct({
+          ...newProduct,
+          images: [...newProduct.images, base64],
+        });
       }
-    }
+    };
+    reader.readAsDataURL(files[0]);
   };
-  
-
-  const handleDelete = async (id: number) => {
-    setLoading(true);
-    const { error } = await supabase
-      .from("Shop_Products")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      toast.error("Mahsulot o‘chirishda xatolik yuz berdi!");
-      console.error(error);
-    } else {
-      toast.success("Mahsulot muvaffaqiyatli o‘chirildi!");
-      fetchProducts();
-      setLoading(false);
-    }
-  };
-
-  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files![0];
-    const { data, error } = await supabase.storage
-      .from("Products_Image")
-      .upload(`products/${Date.now()}.jpg`, file);
-
-    if (error) {
-      toast.error("Rasm yuklashda xatolik yuz berdi!");
-    } else {
-      toast.success("Rasm muvaffaqiyatli yuklandi!");
-      setImages([...images, data.fullPath]);
-    }
-  };
-
-  const handleUpdate = (product: ProductType) => {
-    setCurrent(product.id);
-    setName(product.name);
-    setDesc(product.desc);
-    setPrice(product.price);
-    setCategoryId(product.category_id);
-    setActive(product.active);
-    setImages(product.images);
-    setOpenRodal(true);
-  };
-
   return (
-    <div className="flex">
-      <div className="w-full py-10 px-10">
-        <ToastContainer />
-        <div className="flex justify-between items-center mb-10">
-          <h1 className="text-2xl font-bold">Products</h1>
-          <button
-            onClick={() => setOpenRodal(true)}
-            className="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center gap-2 focus:scale-75 transition-all duration-300"
-          >
-            + Add New
-          </button>
-        </div>
-        <table className="table table-light table-hover">
-          <thead>
-            <tr>
-              <th>№</th>
-              <th>Image</th>
-              <th>Title</th>
-              <th>Description</th>
-              <th>Category</th>
-              <th>Price</th>
-              <th>Published</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading
-              ? Array.from({ length: 7 }).map((_, index) => (
-                  <tr key={index}>
-                    <td>
-                      <Skeleton width={300} />
+    <div className="grid grid-cols-[1111px_1fr] min-h-screen bg-gray-100">
+      <div className="p-8 w-full flex flex-col">
+        <h1 className="text-2xl font-bold mb-4 text-gray-800">Products</h1>
+        <button
+          onClick={() => setAddModalVisible(true)}
+          className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded mb-4 shadow-md transition duration-300"
+        >
+          Add New Product
+        </button>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse border border-gray-200 shadow-sm">
+            <thead>
+              <tr className="bg-gray-200">
+                <th className="border p-3 text-left">#</th>
+                <th className="border p-3 text-left">title</th>
+                <th className="border p-3 text-left">Price</th>
+                <th className="border p-3 text-left">CategoryId</th>
+                <th className="border p-3 text-left">Status</th>
+                <th className="border p-3 text-left">Images</th>
+                <th className="border p-3 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="text-center p-5">
+                    <FaSpinner className="animate-spin text-gray-500 text-2xl mx-auto" />
+                  </td>
+                </tr>
+              ) : (
+                products.map((product, index) => (
+                  <tr key={product.id} className="odd:bg-gray-50">
+                    <td className="border p-3">{index + 1}</td>
+                    <td className="border p-3">{product.title}</td>
+                    <td className="border p-3">{product.price}</td>
+                    <td className="border p-3">{product.categoryId}</td>
+                    <td className="border p-3">
+                      {product.active ? (
+                        <span className="text-green-600 font-semibold">
+                          Active
+                        </span>
+                      ) : (
+                        <span className="text-red-600 font-semibold">
+                          Inactive
+                        </span>
+                      )}
                     </td>
-                    <td>
-                      <Skeleton width={120} />
+                    <td className="border p-3">
+                      {product.images?.map((image, i) => (
+                        <img
+                          key={i}
+                          src={image}
+                          alt={`Product ${i + 1}`}
+                          className="w-10 h-10 object-cover rounded shadow-md mr-2"
+                        />
+                      ))}
                     </td>
-                    <td>
-                      <Skeleton width={120} />
-                    </td>
-                    <td>
-                      <Skeleton width={180} />
-                    </td>
-                    <td>
-                      <Skeleton width={80} />
-                    </td>
-                    <td>
-                      <Skeleton width={100} />
-                    </td>
-                    <td>
-                      <Skeleton width={100} />
-                    </td>
-                    <td>
-                      <Skeleton width={100} />
-                    </td>
-                  </tr>
-                ))
-              : products.map((product: ProductType, index) => {
-                  const category = categories.find(
-                    (cat) => cat.id === product.category_id
-                  );
-                  return (
-                    <tr key={product.id}>
-                      <td>{index + 1}</td>
-                      <td className="flex items-center gap-2">
-                        {product.images.map((img) => (
-                          <img
-                            key={img}
-                            src={
-                              "https://dijgblooocqejrsjbsto.supabase.co/storage/v1/object/public/" +
-                              img
-                            }
-                            alt=""
-                            className="w-10 h-10 hover:scale-125 duration-200 rounded-sm"
-                          />
-                        ))}
-                      </td>
-                      <td>{product.name}</td>
-                      <td>{product.desc}</td>
-                      <td>{category ? category.name : "Noma'lum"}</td>
-                      
-                      <td>{product.price}</td>
-                      <td>
+                    <td className="border p-3 text-center">
+                      <div className="flex justify-center gap-2">
                         <button
-                          onClick={() => handleActive(product.id)}
-                          className={`btn btn-sm ${
-                            product.active ? "btn-success" : "btn-danger"
-                          }`}
+                          onClick={() => {
+                            setSelectedProduct(product);
+                            setFormData(product);
+                            setModalVisible(true);
+                          }}
+                          className="bg-blue-500 hover:bg-blue-600 text-white font-bold p-2 rounded shadow-md transition duration-300"
                         >
-                          {product.active ? "Published" : "Draft"}
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                          onClick={() => handleUpdate(product)}
-                          className="btn btn-primary mr-2"
-                        >
-                          <MdEdit />
+                          <CiEdit className="text-lg" />
                         </button>
                         <button
                           onClick={() => handleDelete(product.id)}
-                          className="btn btn-danger"
+                          className="bg-red-500 hover:bg-red-600 text-white font-bold p-2 rounded shadow-md transition duration-300"
                         >
-                          <MdDelete />
+                          <CiTrash className="text-lg" />
                         </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-          </tbody>
-        </table>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+      <ToastContainer />
+
       <Rodal
-        height={700}
-        visible={openRodal}
-        onClose={() => setOpenRodal(false)}
+        visible={modalVisible}
+        height={600}
+        onClose={() => setModalVisible(false)}
       >
-        <div className="pt-4 flex flex-col justify-between h-full">
-          <div>
-            <h1 className="text-2xl font-bold">Add New Product</h1>
+        {formData && (
+          <div className="flex flex-col items-center justify-center gap-2 p-4">
+            <h2 className="text-xl font-bold mb-4">Edit Product</h2>
             <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="form-control mb-2"
               type="text"
-              placeholder="name..."
+              value={formData.title}
+              onChange={(e) =>
+                setFormData({ ...formData, title: e.target.value })
+              }
+              className="border p-2 w-full mb-2"
+              placeholder="title"
             />
             <input
-              value={desc}
-              onChange={(e) => setDesc(e.target.value)}
-              className="form-control mb-2"
               type="text"
-              placeholder="description..."
+              value={formData.desc}
+              onChange={(e) =>
+                setFormData({ ...formData, desc: e.target.value })
+              }
+              className="border p-2 w-full mb-2"
+              placeholder="desc"
+            />
+            <input
+              type="text"
+              value={formData.price}
+              onChange={(e) =>
+                setFormData({ ...formData, price: e.target.value })
+              }
+              className="border p-2 w-full mb-2"
+              placeholder="Price"
             />
             <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="form-control mb-2"
+              value={formData.categoryId}
+              onChange={(e) =>
+                setFormData({ ...formData, categoryId: e.target.value })
+              }
+              className="border p-2 w-full mb-2"
             >
-              <option value="" disabled>
-                Products Category
-              </option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
-                  {category.name}
+                  {category.title}
                 </option>
               ))}
             </select>
-            <input
-              value={price}
-              onChange={(e) => setPrice(parseInt(e.target.value))}
-              className="form-control mb-2"
-              type="number"
-              placeholder="price..."
-            />
-            <div className="flex justify-between items-center">
-              <p className="text-gray-500 font-bold mb-2">Active</p>
+            <label className="flex items-center gap-2 mb-2">
               <input
-                checked={active}
-                onChange={(e) => setActive(e.target.checked)}
                 type="checkbox"
-                className="form-check-input mb-2"
+                checked={formData.active}
+                onChange={(e) =>
+                  setFormData({ ...formData, active: e.target.checked })
+                }
               />
-            </div>
-            <div className="shadow-lg p-4 rounded-lg mb-2">
-              <label htmlFor="image">
-                Product Image
-                <input onChange={handleUpload} id="image" type="file" hidden />
-              </label>
-            </div>
-            <div className="grid grid-cols-3 gap-1">
-              {images.map((img) => (
+              Active
+            </label>
+            <input
+              type="file"
+              onChange={(e) => handleImageUpload(e, true)}
+              className="border p-2 w-full mb-2"
+            />
+            <div className="flex flex-wrap gap-2">
+              {formData.images.map((image, i) => (
                 <img
-                  key={img}
-                  src={
-                    "https://dijgblooocqejrsjbsto.supabase.co/storage/v1/object/public/" +
-                    img
-                  }
-                  alt=""
-                  className="w-32 h-32"
+                  key={i}
+                  src={image}
+                  alt={`Product Image ${i + 1}`}
+                  className="w-10 h-10 object-cover"
                 />
               ))}
             </div>
+            <button
+              onClick={handleUpdate}
+              className="bg-green-500 text-white p-2 rounded w-full"
+            >
+              Save
+            </button>
           </div>
-          <button onClick={handleAddProduct} className="btn btn-success w-full">
+        )}
+      </Rodal>
+
+      <Rodal
+        visible={addModalVisible}
+        height={600}
+        onClose={() => setAddModalVisible(false)}
+      >
+        <div className="flex flex-col items-center justify-center gap-2 p-4">
+          <h2 className="text-xl font-bold mb-4">Add New Product</h2>
+          <input
+            type="text"
+            value={newProduct.title}
+            onChange={(e) =>
+              setNewProduct({ ...newProduct, title: e.target.value })
+            }
+            className="border p-2 w-full mb-2"
+            placeholder="title"
+          />
+          <input
+            type="text"
+            value={newProduct.desc}
+            onChange={(e) =>
+              setNewProduct({ ...newProduct, desc: e.target.value })
+            }
+            className="border p-2 w-full mb-2"
+            placeholder="desc"
+          />
+          <input
+            type="text"
+            value={newProduct.price}
+            onChange={(e) =>
+              setNewProduct({ ...newProduct, price: e.target.value })
+            }
+            className="border p-2 w-full mb-2"
+            placeholder="Price"
+          />
+          <select
+            value={newProduct.categoryId}
+            onChange={(e) =>
+              setNewProduct({ ...newProduct, categoryId: e.target.value })
+            }
+            className="border p-2 w-full mb-2"
+          >
+            <option value="">Select a category</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.title}
+              </option>
+            ))}
+          </select>
+          <label className="flex items-center gap-2 mb-2">
+            <input
+              type="checkbox"
+              checked={newProduct.active}
+              onChange={(e) =>
+                setNewProduct({ ...newProduct, active: e.target.checked })
+              }
+            />
+            Active
+          </label>
+          <input
+            type="file"
+            onChange={(e) => handleImageUpload(e, false)}
+            className="border p-2 w-full mb-2"
+          />
+          <div className="flex flex-wrap gap-2">
+            {newProduct.images.map((image, i) => (
+              <img
+                key={i}
+                src={image}
+                alt={`Product Image ${i + 1}`}
+                className="w-10 h-10 object-cover"
+              />
+            ))}
+          </div>
+          <button
+            onClick={handleAdd}
+            className="bg-green-500 text-white p-2 rounded w-full"
+          >
             Add Product
           </button>
         </div>

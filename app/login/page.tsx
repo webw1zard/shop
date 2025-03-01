@@ -16,18 +16,22 @@ export default function Home() {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
         setUser(data.session.user);
+        router.push("/"); 
       }
     };
     getSession();
-  }, []);
+  }, [router, supabase.auth]);
 
   const handleLogin = async () => {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data: da, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     if (error) alert(error.message);
-    else setUser(data.user);
+    else {
+      setUser(da.user);
+      router.push("/");
+    }
   };
 
   const handleRegister = () => {
@@ -37,13 +41,17 @@ export default function Home() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    router.push("/");
   };
 
   const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
     });
     if (error) alert(error.message);
+    if (data?.url) {
+      router.push(data.url); 
+    }
   };
 
   return (

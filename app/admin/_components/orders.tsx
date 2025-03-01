@@ -140,7 +140,6 @@ const OrdersPage = () => {
         ))}
       </Row>
 
-      {/* Modal: Order qo'shish */}
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Add New Order</Modal.Title>

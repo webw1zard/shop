@@ -38,11 +38,21 @@ export default function Register() {
     if (insertError) {
       alert("Foydalanuvchini qo'shishda xato yuz berdi!");
     } else {
-      alert("Ro'yxatdan o'tdingiz! Emailingizni tasdiqlang.");
       router.push("/");
     }
 
     setLoading(false);
+      const { data,  } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+  
+      if (error) alert(error);
+      else {
+        await supabase.from("carts").insert({ user_id: data.user?.id });
+        alert("Ro'yxatdan o'tdingiz!");
+        router.push("/");
+      }
   };
 
   return (
