@@ -2,6 +2,7 @@
 import { createClient } from "@/supabase/client";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
+import { CiHeart } from "react-icons/ci";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 
@@ -28,15 +29,16 @@ export default function ProductsPage() {
   const [category, setCategories] = useState<Category[]>([]);
   const [product, setProducts] = useState<Product[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [categoryCounts, setCategoryCounts] = useState<Record<number, number>>(
-    {}
-  );
+  const [categoryCounts, setCategoryCounts] = useState<Record<number, number>>({});
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [likedProducts, setLikedProducts] = useState<string[]>([]);
 
   useEffect(() => {
     fetchCategories();
     fetchProducts();
+    const savedLikes = JSON.parse(localStorage.getItem("likedProducts") || "[]");
+    setLikedProducts(savedLikes);
   }, []);
 
   useEffect(() => {
@@ -83,6 +85,17 @@ export default function ProductsPage() {
     setCategoryCounts(counts);
   }
 
+  function toggleLike(productId: string) {
+    let updatedLikes;
+    if (likedProducts.includes(productId)) {
+      updatedLikes = likedProducts.filter((id) => id !== productId);
+    } else {
+      updatedLikes = [...likedProducts, productId];
+    }
+    setLikedProducts(updatedLikes);
+    localStorage.setItem("likedProducts", JSON.stringify(updatedLikes));
+  }
+
   return (
     <div className="flex justify-center items-start p-6 gap-6">
       <div className="h-[500px] w-[300px] shadow-md border bg-white rounded-lg p-4">
@@ -97,30 +110,19 @@ export default function ProductsPage() {
           ) : (
             <>
               <li
-                className={`cursor-pointer text-lg font-medium ${
-                  selectedCategory === null
-                    ? "text-green-600"
-                    : "text-gray-700"
-                } hover:text-green-500`}
+                className={`cursor-pointer text-lg font-medium ${selectedCategory === null ? "text-green-600" : "text-gray-700"} hover:text-green-500`}
                 onClick={() => setSelectedCategory(null)}
               >
-                All Products{" "}
-                <span className="text-gray-500">({product.length})</span>
+                All Products <span className="text-gray-500">({product.length})</span>
               </li>
               {category.map((category) => (
                 <li
                   key={category.id}
-                  className={`flex justify-between items-center cursor-pointer text-lg font-medium ${
-                    selectedCategory === category.id
-                      ? "text-green-600"
-                      : "text-gray-700"
-                  } hover:text-green-500`}
+                  className={`flex justify-between items-center cursor-pointer text-lg font-medium ${selectedCategory === category.id ? "text-green-600" : "text-gray-700"} hover:text-green-500`}
                   onClick={() => setSelectedCategory(category.id)}
                 >
                   <span>{category.title}</span>
-                  <span className="text-gray-500">
-                    ({categoryCounts[category.id] || 0})
-                  </span>
+                  <span className="text-gray-500">({categoryCounts[category.id] || 0})</span>
                 </li>
               ))}
             </>
@@ -130,17 +132,12 @@ export default function ProductsPage() {
 
       <div className="min-h-[500px] w-full rounded-lg border shadow-md bg-white p-6">
         <h2 className="text-2xl font-bold text-gray-800 mb-4">
-          {selectedCategory
-            ? category.find((c) => c.id === selectedCategory)?.title
-            : "All Products"}
+          {selectedCategory ? category.find((c) => c.id === selectedCategory)?.title : "All Products"}
         </h2>
         <div className="grid grid-cols-3 gap-6">
           {loadingProducts
             ? Array.from({ length: 6 }).map((_, index) => (
-                <div
-                  key={index}
-                  className="border rounded-lg p-4 shadow-sm"
-                >
+                <div key={index} className="border rounded-lg p-4 shadow-sm">
                   <Skeleton height={160} className="rounded-md mb-3" />
                   <Skeleton height={20} width="80%" className="mb-2" />
                   <Skeleton height={15} width="60%" className="mb-1" />
@@ -150,26 +147,21 @@ export default function ProductsPage() {
               ))
             : product.length > 0 ? (
                 product.map((product) => (
-                  <div
-                    key={product.id}
-                    className="border rounded-lg p-4 shadow-sm hover:shadow-md transition text-center"
-                  >
+                  <div key={product.id} className="border rounded-lg p-4 shadow-sm hover:shadow-md transition text-center relative">
+                    <button className={`text-2xl cursor-pointer ${likedProducts.includes(product.id) ? "text-red-500" : "text-gray-400"} `}>
+                    <CiHeart
+                      className={`text-2xl cursor-pointer ${likedProducts.includes(product.id) ? "text-red-500" : "text-gray-400"}`}
+                      onClick={() => toggleLike(product.id)}
+                    />
+                    </button>
                     {product.images.length > 0 && (
-                      <img
-                        src={product.images[0]}
-                        alt={product.title}
-                        className="w-full h-40 object-cover rounded-md mb-3"
-                      />
+                      <img src={product.images[0]} alt={product.title} className="w-full h-40 object-cover rounded-md mb-3" />
                     )}
                     <h3 className="text-lg font-semibold">{product.title}</h3>
                     <p className="text-sm text-gray-500">{product.desc}</p>
-                    <p className="text-green-600 font-bold">
-                      ${product.price}
-                    </p>
-                    <p className="text-gray-500 font-thin">
-                      {product.created_at.slice(0, 10)}
-                    </p>
-                    <button className="btn btn-success rounded-sm mt-2" onClick={()=>{router.push(`/product/${product.id}`)}}>View Details</button>
+                    <p className="text-green-600 font-bold">${product.price}</p>
+                    <p className="text-gray-500 font-thin">{product.created_at.slice(0, 10)}</p>
+                    <button className="btn btn-success rounded-sm mt-2" onClick={() => router.push(`/product/${product.id}`)}>View Details</button>
                   </div>
                 ))
               ) : (

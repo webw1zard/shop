@@ -3,6 +3,8 @@ import Home from "@/app/_components/header";
 import { createClient } from "@/supabase/client";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
+import { CiHeart } from "react-icons/ci";
+import { FaHeart } from "react-icons/fa";
 
 interface Category {
   id: number;
@@ -30,8 +32,6 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!params?.id) return;
-
     const fetchProduct = async () => {
       const { data, error } = await supabase
         .from("product")
@@ -100,7 +100,7 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
           title: product.title,
           price: product.price,
           quantity: 1,
-        }); // ✅ Faqat kerakli ma'lumotlarni saqlaymiz
+        }); 
       }
 
       localStorage.setItem("cart", JSON.stringify(existingCart));
@@ -123,6 +123,7 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
     <div className="w-full">
       <Home />
       <div className="w-[80%] mx-auto">
+
         <div className="flex gap-10 my-10">
           <div className="w-1/2">
             <div className="flex flex-col items-center">
@@ -144,7 +145,10 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
                         : "opacity-50 hover:opacity-75"
                     }`}
                   />
+                  
                 ))}
+
+                
               </div>
             </div>
           </div>
